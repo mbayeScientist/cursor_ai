@@ -1,48 +1,54 @@
-import { supabase } from '@/lib/supabase';
+import { SupabaseService } from './base/supabaseService';
+import { generateApiKey } from '@/utils/apiKeyGenerator';
 
-export const apiKeyService = {
+class ApiKeyService extends SupabaseService {
+  constructor() {
+    super('api_keys');
+  }
+
   async fetchApiKeys() {
-    const { data, error } = await supabase
-      .from('api_keys')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data;
-  },
+    return this.select('*', {
+      orderBy: 'created_at',
+      ascending: false
+    });
+  }
 
   async createApiKey(keyData) {
     const newKey = {
       name: keyData.name,
-      keys: `mbaye-${Math.random().toString(36).substring(2)}`,
+      keys: generateApiKey(),
       usage: 0
     };
 
-    const { data, error } = await supabase
-      .from('api_keys')
-      .insert([newKey])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  },
+    return this.insert(newKey, { select: true, single: true });
+  }
 
   async updateApiKey(id, name) {
-    const { error } = await supabase
-      .from('api_keys')
-      .update({ name })
-      .eq('id', id);
-
-    if (error) throw error;
-  },
+    return this.update(id, { name });
+  }
 
   async deleteApiKey(id) {
-    const { error } = await supabase
-      .from('api_keys')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
+    return this.delete(id);
   }
-}; 
+
+  async validateApiKey(apiKey) {
+    try {
+      const data = await this.select('id, usage', {
+        filters: [{ field: 'keys', value: apiKey }],
+        single: true
+      });
+
+      if (data) {
+        await this.update(data.id, { usage: (data.usage || 0) + 1 });
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error validating API key:', error);
+      return false;
+    }
+  }
+}
+
+export const apiKeyService = new ApiKeyService(); 
