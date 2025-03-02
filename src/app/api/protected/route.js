@@ -3,8 +3,9 @@ import { apiKeyService } from '@/services/apiKeyService';
 
 export async function POST(request) {
   try {
-    // Get the API key from the Authorization header
-    const apiKey = request.headers.get('Authorization')?.replace('Bearer ', '');
+    // Get the request body
+    const body = await request.json();
+    const apiKey = body.apiKey;
 
     if (!apiKey) {
       return NextResponse.json(
@@ -23,13 +24,9 @@ export async function POST(request) {
       );
     }
 
-    // Get the request body
-    const body = await request.json();
-
-    // Process the request (example response)
+    // Return success response
     return NextResponse.json({
       message: 'Success',
-      data: body,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
